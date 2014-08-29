@@ -88,40 +88,50 @@ angular.module('dendrite.controllers', []).
           $location.path('projects/'+id);
         };
     }).
-    controller('BranchListCtrl', function($scope, $modal, $location, $routeParams, User, Project) {
+    controller('BranchListCtrl', function($scope, $modal, $location, $routeParams, User, Branch, Project, $rootScope) {
         $scope.User = User;
         
         Project.query({projectId: $routeParams.projectId})
                 .$then(function(response) {
                     $scope.project = response.data.project;
                     $scope.projectName = response.data.project.name;
-                   }); 
-        $scope.queryBranches = Project.branches({projectId: $routeParams.projectId})
-  //TODO needs the showBranch call to check if currentBranch is equal to clicked branch, if not then switch branch. Else, go back to project detail page.
-    }).
-    controller('ProjectCreateCtrl', function($rootScope, $scope, $location, User, Project, History) {
-        $scope.User = User;
-        $scope.save = function() {
-            Project.save({}, $scope.project)
-                    .$then(function(response) {
-                      var project = response.data.project;
-                      History.createDir(project._id);
-                      $rootScope.$broadcast('event:reloadProjectNeeded');
-                      $location.path('projects/' + project._id);
-                    });
-        };
-    }).
-    controller('ProjectCarveCtrl', function($rootScope, $scope, $route, $location, Project) {
-        $scope.projectCarve = function(projectId) {
-            $rootScope.projectCommitting = true;
-            var params = {name: $scope.newProjectName, query: $scope.gridOptions.filterOptions.filterText, steps: $scope.newProjectSteps};
-            Project.carveSubgraph({projectId: projectId}, params)
-                    .$then(function(response) {
-                        $rootScope.projectCommitting = false;
-                        angular.element('.modal-backdrop').hide();
-                        $location.path('projects/' + response.data.projectId);
-                    });
-        };
+                    }); 
+        $scope.queryBranches = Project.branches({projectId: $routeParams.projectId});
+            Project.currentBranch({projectId: $routeParams.projectId})
+                .$then(function(response) {
+                    $scope.Branch = response.data.branch;
+                    $scope.currentBranchId = response.data.branch._id;
+                    $scope.currentBranchName = response.data.branch.name;
+                   });
+                
+//TODO Needs to be tested for branch switch on projects with more than one branch.
+          
+          
+          $scope.showBranch = function(id){
+          console.log("the id is " +id);
+          console.log("the current id is "+$scope.currentBranchId)
+              if (id == $scope.currentBranchId){
+                $location.path('projects/'+$routeParams.projectId);
+                  }             
+              else {
+                Branch.query({branchId: id})
+                      .$then(function(response) {
+                        console.log(response)
+                        $scope.branchName= response.data.branch.name;
+                        console.log("the wanted branch name is " +$scope.branchName)             
+                        })
+//.switchBranch 'PUT' fails - does this have to do with the need for a commit/backend mumbojumbo? The code below about polling branches & switching seems super complicated to me, undoubtedly due to zero understanding of back end.
+                   Project.switchBranch({projectId: $routeParams.projectId}, {branchName: $scope.branchName})
+                                    .$then(function(response) {
+                                        console.log($scope.branchName)
+                                        $rootScope.branchMessage = "Now using branch: "+$scope.branchName;                      
+                                    }, function(error) {
+                                        console.log("ERROR switching branch: ", error);
+                                        $location.path('projects/'+$routeParams.projectId+'/branches');
+                                        });
+                  };
+          };          
+
     }).
     controller('ProjectDetailCtrl', function($rootScope, $modal, $scope, $timeout, $routeParams, $route, $location, $q, appConfig, Project, Graph, GraphTransform) {
         $rootScope.projectId = $routeParams.projectId;

@@ -956,7 +956,12 @@ angular.module('dendrite.services', ['ngResource']).
                 url: 'api/branches/:branchId',
                 method: 'DELETE',
                 isArray: false
-            }
+            },
+            query: {
+                url: 'api/branches/:branchId',
+                method: 'GET',
+                isArray: false
+            },
         });
     }).
     factory('Graph', function($resource) {
